@@ -10,16 +10,6 @@ export function isLocked(kickoffTime: Date | string): boolean {
   return new Date(kickoffTime).getTime() <= Date.now();
 }
 
-export function formatKickoff(kickoffTime: Date | string): string {
-  return new Date(kickoffTime).toLocaleString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 /** Build a flag image URL from an ISO 3166-1 alpha-2 code via flagcdn, else return as-is. */
 export function flagUrl(code?: string | null): string | null {
   if (!code) return null;

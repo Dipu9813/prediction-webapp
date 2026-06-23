@@ -7,7 +7,7 @@ import Countdown from "@/components/Countdown";
 import StatusBadge from "@/components/StatusBadge";
 import PredictionForm from "@/components/PredictionForm";
 import AutoRefresh from "@/components/AutoRefresh";
-import { formatKickoff } from "@/lib/utils";
+import LocalTime from "@/components/LocalTime";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <div className="card p-6">
         <div className="mb-4 flex items-center justify-between text-sm text-slate-400">
           <StatusBadge status={match.status} />
-          <span>{formatKickoff(match.kickoffTime)}</span>
+          <LocalTime iso={match.kickoffTime} />
         </div>
 
         <div className="flex items-center justify-around gap-4">

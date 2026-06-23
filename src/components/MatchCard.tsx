@@ -3,8 +3,8 @@ import Flag from "@/components/Flag";
 import Countdown from "@/components/Countdown";
 import StatusBadge from "@/components/StatusBadge";
 import PredictionForm from "@/components/PredictionForm";
+import LocalTime from "@/components/LocalTime";
 import type { MatchDTO } from "@/lib/queries";
-import { formatKickoff } from "@/lib/utils";
 
 export default function MatchCard({ match }: { match: MatchDTO }) {
   const finished = match.status === "FINISHED";
@@ -13,7 +13,7 @@ export default function MatchCard({ match }: { match: MatchDTO }) {
     <div className="card animate-fade-in p-5">
       <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
         <StatusBadge status={match.status} />
-        <span>{formatKickoff(match.kickoffTime)}</span>
+        <LocalTime iso={match.kickoffTime} />
       </div>
 
       <Link href={`/match/${match.id}`} className="block">
