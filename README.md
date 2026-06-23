@@ -126,13 +126,17 @@ synced from the API into the `matches` table.
 - **Manual:** open `/admin` → **Sync real matches**. This fetches the World Cup
   fixtures + current scores and upserts them (idempotent — safe to click anytime).
   Entering/updating a finished score automatically awards points via the DB trigger.
-- **Automatic (live):** `vercel.json` defines a cron that calls `GET /api/sync`
-  every minute. On Vercel, set the same env vars **plus** `CRON_SECRET`; Vercel
-  sends `Authorization: Bearer $CRON_SECRET`, which the endpoint checks.
-  Pages with a live match auto-refresh every 30s so scores update on screen.
+- **Automatic (live):** the sync endpoint (`GET /api/sync`) is protected by
+  `CRON_SECRET` (`Authorization: Bearer $CRON_SECRET`). Pages with a live match
+  auto-refresh every 30s so scores update on screen. Two schedulers are wired up:
+  - **`vercel.json`** — a daily safety sync (`0 6 * * *`). The Vercel **Hobby**
+    plan only allows once-per-day crons; an every-minute schedule needs Vercel Pro.
+  - **`.github/workflows/sync.yml`** — a free GitHub Actions cron that calls the
+    endpoint every ~5 minutes (GitHub's minimum) for near-live updates. Add two
+    repo secrets under **Settings → Secrets and variables → Actions**:
+    `APP_URL` (your deployed URL, no trailing slash) and `CRON_SECRET`.
 
-> The cron only runs on Vercel. Locally, use the admin **Sync** button, or hit the
-> endpoint yourself:
+> Locally, use the admin **Sync** button, or hit the endpoint yourself:
 > `curl -X GET localhost:3000/api/sync -H "Authorization: Bearer <CRON_SECRET>"`.
 
 > Free-tier note: football-data.org allows 10 requests/min. A once-a-minute cron is
