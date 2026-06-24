@@ -38,11 +38,14 @@ function LoginCard() {
   async function google() {
     setLoading(true);
     const supabase = createClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    // Always return to the origin the user is actually on (localhost in dev,
+    // the deployed domain in prod). Using NEXT_PUBLIC_SITE_URL here would force
+    // every login back to production even when developing locally.
+    const origin = window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${siteUrl}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+        redirectTo: `${origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
       },
     });
     if (error) setLoading(false);
