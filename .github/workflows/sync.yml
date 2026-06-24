@@ -12,10 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call /api/sync
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::error::APP_URL secret is not set"; exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "Calling ${APP_URL}/api/sync"
           body=$(curl -s -w "\n%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_URL }}/api/sync")
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL}/api/sync")
           code=$(echo "$body" | tail -n1)
           echo "Sync responded with HTTP $code"
           echo "Response body: $(echo "$body" | sed '$d')"
