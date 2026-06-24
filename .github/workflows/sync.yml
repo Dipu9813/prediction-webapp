@@ -13,8 +13,10 @@ jobs:
     steps:
       - name: Call /api/sync
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" \
+          body=$(curl -s -w "\n%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.APP_URL }}/api/sync")
+          code=$(echo "$body" | tail -n1)
           echo "Sync responded with HTTP $code"
+          echo "Response body: $(echo "$body" | sed '$d')"
           test "$code" = "200"
