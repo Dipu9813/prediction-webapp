@@ -215,6 +215,11 @@ begin
     update public.predictions set points_awarded = null where match_id = p_match_id;
   end if;
 
+  -- Mark this as a trusted, system-driven totals update so guard_profile
+  -- lets it through even when there is no admin JWT (e.g. the sync runs with
+  -- the service-role key, where auth.uid() is null). Transaction-scoped.
+  perform set_config('app.scoring', 'on', true);
+
   -- Refresh totals for every user who predicted this match.
   update public.profiles pr
      set points = coalesce((
@@ -264,6 +269,7 @@ begin
            where status = 'FINISHED' and home_score is not null and away_score is not null loop
     perform public.score_match(r.id);
   end loop;
+  perform set_config('app.scoring', 'on', true);
   update public.profiles pr
      set points = coalesce((
        select sum(p.points_awarded) from public.predictions p
@@ -321,7 +327,10 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_admin() then
+  -- Allow trusted, system-driven point updates (set inside score_match /
+  -- recalculate_all) to pass through; otherwise non-admins can never change
+  -- role or points.
+  if not public.is_admin() and current_setting('app.scoring', true) is distinct from 'on' then
     new.role := old.role;
     new.points := old.points;
   end if;
