@@ -264,7 +264,7 @@ begin
   if not public.is_admin() then
     raise exception 'Not authorised';
   end if;
-  update public.predictions set points_awarded = null;
+  update public.predictions set points_awarded = null where points_awarded is not null;
   for r in select id from public.matches
            where status = 'FINISHED' and home_score is not null and away_score is not null loop
     perform public.score_match(r.id);
@@ -273,7 +273,8 @@ begin
   update public.profiles pr
      set points = coalesce((
        select sum(p.points_awarded) from public.predictions p
-       where p.user_id = pr.id and p.points_awarded is not null), 0);
+       where p.user_id = pr.id and p.points_awarded is not null), 0)
+   where pr.id is not null;
 end;
 $$;
 
