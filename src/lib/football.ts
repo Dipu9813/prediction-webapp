@@ -20,6 +20,7 @@ type FDResponse = { matches: FDMatch[] };
 
 function mapStatus(s: string): MatchStatus {
   switch (s) {
+    case "LIVE":
     case "IN_PLAY":
     case "PAUSED":
     case "SUSPENDED":

@@ -69,6 +69,11 @@ const SELECT =
 
 function toDTO(m: MatchRow, userId: string | null, predictors: Predictor[] = []): MatchDTO {
   const locked = isLocked(m.kickoff_time);
+  // The DB status only updates when the sync job runs (cron). If kickoff has
+  // passed but the status hasn't been flipped yet, treat the match as LIVE so
+  // it never falls into a gap between "upcoming" and "finished" and disappears.
+  const status: MatchStatus =
+    m.status !== "FINISHED" && locked ? "LIVE" : m.status;
   // RLS already hides others' predictions before kickoff, but we double-guard here.
   const mine = userId ? m.predictions.find((p) => p.user_id === userId) : undefined;
 
@@ -93,7 +98,7 @@ function toDTO(m: MatchRow, userId: string | null, predictors: Predictor[] = [])
     awayFlag: m.away_flag,
     stadium: m.stadium,
     kickoffTime: m.kickoff_time,
-    status: m.status,
+    status,
     homeScore: m.home_score,
     awayScore: m.away_score,
     locked,
