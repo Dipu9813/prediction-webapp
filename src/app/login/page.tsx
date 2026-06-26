@@ -80,7 +80,7 @@ function LoginCard() {
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-      <Link href="/" className="flex items-center gap-2 text-lg font-bold">
+      <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold">
         <Image
           src="/logo.png"
           alt="Bhagya Bharosa AI"

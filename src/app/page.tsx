@@ -14,7 +14,7 @@ export default async function LandingPage() {
   return (
     <main className="mx-auto max-w-5xl px-4">
       <nav className="flex items-center justify-between py-6">
-        <div className="flex items-center gap-2 font-bold">
+        <Link href="/dashboard" className="flex items-center gap-2 font-bold">
           <Image
             src="/logo.png"
             alt="Bhagya Bharosa AI"
@@ -24,7 +24,7 @@ export default async function LandingPage() {
             priority
           />
           Bhagya Bharosa AI
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
           <Link href="/login" className="btn-gold">
             Sign in
