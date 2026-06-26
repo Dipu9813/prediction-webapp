@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/queries";
@@ -40,7 +41,10 @@ export default async function LeaderboardPage() {
                   {Number(u.rank)}
                 </td>
                 <td className="px-2 py-3 sm:px-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
+                  <Link
+                    href={`/user/${u.id}`}
+                    className="flex items-center gap-2 rounded-lg transition-colors hover:bg-white/5 sm:gap-3"
+                  >
                     {u.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={u.image} alt="" className="h-8 w-8 shrink-0 rounded-full" />
@@ -51,12 +55,12 @@ export default async function LeaderboardPage() {
                     )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 font-medium">
-                        <span className="truncate">{u.username}</span>
+                        <span className="truncate hover:underline">{u.username}</span>
                         {u.id === meId && <span className="badge shrink-0 bg-brand/20 text-brand">You</span>}
                       </div>
                       <div className="truncate text-xs text-slate-500">{u.name}</div>
                     </div>
-                  </div>
+                  </Link>
                 </td>
                 <td className="px-2 py-3 text-center text-slate-300 sm:px-4">{Number(u.exact_count)}</td>
                 <td className="px-2 py-3 text-right text-lg font-extrabold text-gold sm:px-4">{u.points}</td>
