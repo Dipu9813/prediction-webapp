@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "World Cup Predictor",
-  description: "Predict FIFA World Cup match results and climb the global leaderboard.",
+  title: "Bhagya Bharosa AI",
+  description:
+    "Predict FIFA World Cup match scores and climb the leaderboard. Powered by state-of-the-art machine learning (it's basically luck).",
+  icons: { icon: "/logo.png" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

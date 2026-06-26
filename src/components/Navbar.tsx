@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Trophy, LayoutDashboard, Medal, User, Shield, LogOut } from "lucide-react";
+import { LayoutDashboard, Medal, User, Shield, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,8 +28,15 @@ export default function Navbar({ isAdmin }: { isAdmin: boolean }) {
     <header className="sticky top-0 z-40 border-b border-white/10 bg-pitch-deep/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-          <Trophy className="h-6 w-6 text-gold" />
-          <span className="hidden sm:inline">World Cup Predictor</span>
+          <Image
+            src="/logo.png"
+            alt="Bhagya Bharosa AI"
+            width={64}
+            height={74}
+            className="h-9 w-auto"
+            priority
+          />
+          <span className="hidden sm:inline">Bhagya Bharosa AI</span>
         </Link>
 
         <nav className="flex items-center gap-1">

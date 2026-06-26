@@ -1,9 +1,9 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 function GoogleIcon() {
@@ -80,8 +80,16 @@ function LoginCard() {
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-      <Link href="/" className="flex items-center gap-2 font-bold">
-        <Trophy className="h-6 w-6 text-gold" /> World Cup Predictor
+      <Link href="/" className="flex items-center gap-2 text-lg font-bold">
+        <Image
+          src="/logo.png"
+          alt="Bhagya Bharosa AI"
+          width={96}
+          height={111}
+          className="h-12 w-auto"
+          priority
+        />
+        Bhagya Bharosa AI
       </Link>
       <Suspense>
         <LoginCard />

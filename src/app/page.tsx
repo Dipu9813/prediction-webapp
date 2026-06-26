@@ -1,6 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Trophy, Lock, Medal, Eye } from "lucide-react";
+import { Lock, Medal, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function LandingPage() {
@@ -14,7 +15,15 @@ export default async function LandingPage() {
     <main className="mx-auto max-w-5xl px-4">
       <nav className="flex items-center justify-between py-6">
         <div className="flex items-center gap-2 font-bold">
-          <Trophy className="h-6 w-6 text-gold" /> World Cup Predictor
+          <Image
+            src="/logo.png"
+            alt="Bhagya Bharosa AI"
+            width={64}
+            height={74}
+            className="h-9 w-auto"
+            priority
+          />
+          Bhagya Bharosa AI
         </div>
         <div className="flex items-center gap-2">
           <Link href="/login" className="btn-gold">
