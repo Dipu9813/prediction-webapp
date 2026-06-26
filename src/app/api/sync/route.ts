@@ -36,6 +36,11 @@ async function runSync() {
     .upsert(matches, { onConflict: "external_id" });
   if (error) throw new Error(error.message);
 
+  // Record a heartbeat so the admin panel can tell whether the cron is alive.
+  await admin
+    .from("app_meta")
+    .upsert({ key: "last_synced_at", value: new Date().toISOString() }, { onConflict: "key" });
+
   return { synced: matches.length };
 }
 

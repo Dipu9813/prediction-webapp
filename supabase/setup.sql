@@ -51,6 +51,13 @@ create table if not exists public.matches (
 );
 create index if not exists matches_kickoff_idx on public.matches (kickoff_time);
 
+-- Small key/value store. Used to record when the football-data.org sync last
+-- ran (key 'last_synced_at'), so the admin panel can warn if the cron died.
+create table if not exists public.app_meta (
+  key   text primary key,
+  value text
+);
+
 create table if not exists public.predictions (
   id                    uuid primary key default gen_random_uuid(),
   user_id               uuid not null references public.profiles (id) on delete cascade,
@@ -328,6 +335,13 @@ grant execute on function public.get_predictors(uuid) to authenticated;
 alter table public.profiles    enable row level security;
 alter table public.matches     enable row level security;
 alter table public.predictions enable row level security;
+alter table public.app_meta    enable row level security;
+
+-- app_meta: anyone logged in can read (admin panel). Writes happen only from the
+-- sync route via the service-role client, which bypasses RLS, so no write policy.
+drop policy if exists app_meta_select on public.app_meta;
+create policy app_meta_select on public.app_meta
+  for select to authenticated using (true);
 
 -- profiles: everyone (logged in) can read; users update only their own row;
 -- a guard trigger stops them changing role/points; admins can update anyone.

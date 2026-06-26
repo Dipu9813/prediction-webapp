@@ -61,9 +61,20 @@ export type PredictorRow = {
   image: string | null;
 };
 
+export type AppMeta = {
+  key: string;
+  value: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
+      app_meta: {
+        Row: AppMeta;
+        Insert: AppMeta;
+        Update: Partial<AppMeta>;
+        Relationships: [];
+      };
       profiles: {
         Row: Profile;
         Insert: Partial<Profile>;

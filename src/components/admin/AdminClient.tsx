@@ -12,10 +12,20 @@ export default function AdminClient() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [lastSynced, setLastSynced] = useState<string | null | undefined>(undefined);
 
   const loadMatches = useCallback(async () => {
     const { data } = await supabase.from("matches").select("*").order("kickoff_time");
     if (data) setMatches(data);
+  }, [supabase]);
+
+  const loadSyncHealth = useCallback(async () => {
+    const { data } = await supabase
+      .from("app_meta")
+      .select("value")
+      .eq("key", "last_synced_at")
+      .maybeSingle();
+    setLastSynced(data?.value ?? null);
   }, [supabase]);
 
   const loadUsers = useCallback(async () => {
@@ -26,7 +36,8 @@ export default function AdminClient() {
   useEffect(() => {
     loadMatches();
     loadUsers();
-  }, [loadMatches, loadUsers]);
+    loadSyncHealth();
+  }, [loadMatches, loadUsers, loadSyncHealth]);
 
   async function recalc() {
     setBusy(true);
@@ -49,6 +60,7 @@ export default function AdminClient() {
     }
     setMsg(data.message ?? `Synced ${data.synced} real matches from football-data.org.`);
     loadMatches();
+    loadSyncHealth();
   }
 
   return (
@@ -66,6 +78,7 @@ export default function AdminClient() {
           </button>
         </div>
       </div>
+      <SyncHealth iso={lastSynced} />
       {msg && <p className="text-sm text-brand">{msg}</p>}
 
       <div className="flex gap-2">
@@ -83,6 +96,43 @@ export default function AdminClient() {
         <UsersTab users={users} reload={loadUsers} />
       )}
     </div>
+  );
+}
+
+function SyncHealth({ iso }: { iso: string | null | undefined }) {
+  if (iso === undefined) return null; // still loading
+
+  if (iso === null) {
+    return (
+      <p className="badge bg-slate-500/15 text-slate-300">
+        ● Never synced — run the cron or hit “Sync real matches”.
+      </p>
+    );
+  }
+
+  const ageMin = (Date.now() - new Date(iso).getTime()) / 60000;
+  const rel =
+    ageMin < 1
+      ? "just now"
+      : ageMin < 60
+        ? `${Math.floor(ageMin)} min ago`
+        : ageMin < 1440
+          ? `${Math.floor(ageMin / 60)} h ago`
+          : `${Math.floor(ageMin / 1440)} d ago`;
+
+  // > 15 min without a sync means the cron is likely down (it should run often).
+  const cls =
+    ageMin < 5
+      ? "bg-emerald-500/15 text-emerald-300"
+      : ageMin < 15
+        ? "bg-amber-500/15 text-amber-300"
+        : "bg-red-500/15 text-red-300";
+
+  return (
+    <p className={`badge ${cls}`}>
+      ● Last synced {rel}
+      {ageMin >= 15 && " — cron may be down"}
+    </p>
   );
 }
 
