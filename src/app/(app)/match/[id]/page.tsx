@@ -93,13 +93,39 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </h2>
 
         {match.allPredictions === null ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center text-slate-400">
-            <EyeOff className="h-8 w-8" />
-            <p className="font-medium">Predictions are hidden until kickoff</p>
-            <p className="text-sm text-slate-500">
-              Everyone&apos;s picks become visible the moment the match starts — so no one can copy.
+          match.predictors.length === 0 ? (
+            <p className="py-6 text-center text-slate-500">
+              No predictions yet — be the first to lock in a pick!
             </p>
-          </div>
+          ) : (
+            <>
+              <div className="mb-4 flex items-start gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-slate-400">
+                <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  These players have locked in their pick. Predicted scores are
+                  shown only after kickoff — so no one can copy.
+                </p>
+              </div>
+              <ul className="divide-y divide-white/5">
+                {match.predictors.map((p, i) => (
+                  <li key={`${p.username}-${i}`} className="flex items-center gap-3 py-2.5">
+                    {p.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.image} alt="" className="h-8 w-8 rounded-full" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold">
+                        {p.username.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="flex-1 truncate">{p.username}</span>
+                    <span className="inline-flex items-center gap-1 text-sm text-slate-500">
+                      <Lock className="h-3.5 w-3.5" /> Hidden
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )
         ) : match.allPredictions.length === 0 ? (
           <p className="py-6 text-center text-slate-500">No predictions were made for this match.</p>
         ) : (

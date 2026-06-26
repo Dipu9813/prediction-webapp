@@ -53,6 +53,14 @@ export type LeaderboardRow = {
   exact_count: number;
 };
 
+// Identity-only row (no scores) returned by get_predictors — used to show who
+// has predicted a match before kickoff without revealing their picks.
+export type PredictorRow = {
+  username: string;
+  name: string;
+  image: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -81,6 +89,7 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       get_leaderboard: { Args: Record<string, never>; Returns: LeaderboardRow[] };
+      get_predictors: { Args: { p_match_id: string }; Returns: PredictorRow[] };
       recalculate_all: { Args: Record<string, never>; Returns: undefined };
     };
     Enums: {

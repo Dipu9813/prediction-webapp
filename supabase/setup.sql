@@ -300,6 +300,29 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Predictor identities for a match: WHO has predicted, WITHOUT their scores.
+-- Lets the UI show participants before kickoff while picks stay hidden.
+-- SECURITY DEFINER so it can see everyone's row even before kickoff (RLS would
+-- otherwise hide them) — but it deliberately selects ONLY username/name/image,
+-- never the predicted_* score columns, so the actual picks remain secret.
+-- ---------------------------------------------------------------------------
+create or replace function public.get_predictors(p_match_id uuid)
+returns table (username text, name text, image text)
+language sql
+security definer
+set search_path = public
+as $$
+  select pr.username, pr.name, pr.image
+  from public.predictions p
+  join public.profiles pr on pr.id = p.user_id
+  where p.match_id = p_match_id
+  order by p.submitted_at asc;
+$$;
+
+revoke all on function public.get_predictors(uuid) from public;
+grant execute on function public.get_predictors(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Row-Level Security
 -- ---------------------------------------------------------------------------
 alter table public.profiles    enable row level security;

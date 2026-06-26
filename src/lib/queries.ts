@@ -11,6 +11,13 @@ export type PublicPrediction = {
   pointsAwarded: number | null;
 };
 
+// Who has predicted a match, without their scores (shown before kickoff).
+export type Predictor = {
+  username: string;
+  name: string;
+  image: string | null;
+};
+
 export type MatchDTO = {
   id: string;
   homeTeam: string;
@@ -29,6 +36,7 @@ export type MatchDTO = {
     pointsAwarded: number | null;
   } | null;
   allPredictions: PublicPrediction[] | null; // null while hidden (before kickoff)
+  predictors: Predictor[]; // who has predicted (identities only); used before kickoff
   predictionCount: number;
 };
 
@@ -59,7 +67,7 @@ type MatchRow = {
 const SELECT =
   "*, predictions(user_id, predicted_home_score, predicted_away_score, points_awarded, profiles(username, name, image))";
 
-function toDTO(m: MatchRow, userId: string | null): MatchDTO {
+function toDTO(m: MatchRow, userId: string | null, predictors: Predictor[] = []): MatchDTO {
   const locked = isLocked(m.kickoff_time);
   // RLS already hides others' predictions before kickoff, but we double-guard here.
   const mine = userId ? m.predictions.find((p) => p.user_id === userId) : undefined;
@@ -97,6 +105,7 @@ function toDTO(m: MatchRow, userId: string | null): MatchDTO {
         }
       : null,
     allPredictions,
+    predictors,
     predictionCount: m.prediction_count,
   };
 }
@@ -135,5 +144,20 @@ export async function getMatch(id: string): Promise<MatchDTO | null> {
   const { data, error } = await supabase.from("matches").select(SELECT).eq("id", id).single();
   if (error || !data) return null;
 
-  return toDTO(data as unknown as MatchRow, user?.id ?? null);
+  const row = data as unknown as MatchRow;
+
+  // Before kickoff, RLS hides other players' rows, so fetch the identities of
+  // everyone who predicted (without their scores) to show who's locked in.
+  // After kickoff the full list (with scores) is already available.
+  let predictors: Predictor[] = [];
+  if (!isLocked(row.kickoff_time)) {
+    const { data: rows } = await supabase.rpc("get_predictors", { p_match_id: id });
+    predictors = (rows ?? []).map((p) => ({
+      username: p.username,
+      name: p.name,
+      image: p.image,
+    }));
+  }
+
+  return toDTO(row, user?.id ?? null, predictors);
 }
