@@ -7,7 +7,10 @@ import LocalTime from "@/components/LocalTime";
 import type { MatchDTO } from "@/lib/queries";
 
 export default function MatchCard({ match }: { match: MatchDTO }) {
-  const finished = match.status === "FINISHED";
+  // Show the score for finished matches AND live ones — football-data.org puts
+  // the in-progress score in the same fields, so the sync already has it.
+  const showScore =
+    match.status !== "UPCOMING" && match.homeScore !== null && match.awayScore !== null;
 
   return (
     <div className="card animate-fade-in p-5">
@@ -24,7 +27,7 @@ export default function MatchCard({ match }: { match: MatchDTO }) {
           </div>
 
           <div className="px-3 text-center">
-            {finished ? (
+            {showScore ? (
               <div className="text-2xl font-extrabold tabular-nums">
                 {match.homeScore} <span className="text-slate-500">–</span> {match.awayScore}
               </div>

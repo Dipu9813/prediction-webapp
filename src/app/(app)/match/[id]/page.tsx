@@ -16,7 +16,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(id);
   if (!match) notFound();
 
-  const finished = match.status === "FINISHED";
+  // Live matches carry a score too (football-data.org reports it mid-match), so
+  // show the scoreline whenever one exists and the match isn't still upcoming.
+  const showScore =
+    match.status !== "UPCOMING" && match.homeScore !== null && match.awayScore !== null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -38,7 +41,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="text-center">
-            {finished ? (
+            {showScore ? (
               <div className="text-4xl font-extrabold tabular-nums">
                 {match.homeScore} <span className="text-slate-600">–</span> {match.awayScore}
               </div>
