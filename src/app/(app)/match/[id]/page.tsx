@@ -122,8 +122,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               <div className="mb-4 flex items-start gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-slate-400">
                 <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  These players have locked in their pick. Predicted scores are
-                  shown only after kickoff — so no one can copy.
+                  These players have locked in their pick. Make your own
+                  prediction to reveal everyone&apos;s — until then the scores
+                  stay hidden so no one can copy.
                 </p>
               </div>
               <ul className="divide-y divide-white/5">

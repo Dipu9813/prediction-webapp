@@ -88,7 +88,7 @@ export default function MatchCard({ match }: { match: MatchDTO }) {
         <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
           <span>{match.predictionCount} prediction{match.predictionCount === 1 ? "" : "s"}</span>
           <Link href={`/match/${match.id}`} className="text-brand hover:underline">
-            {match.locked ? "View all predictions →" : "Match details →"}
+            {match.locked || match.myPrediction ? "View all predictions →" : "Match details →"}
           </Link>
         </div>
       </div>

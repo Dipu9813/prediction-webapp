@@ -91,7 +91,11 @@ function toDTO(m: MatchRow, userId: string | null, predictors: Predictor[] = [])
   // RLS already hides others' predictions before kickoff, but we double-guard here.
   const mine = userId ? m.predictions.find((p) => p.user_id === userId) : undefined;
 
-  const allPredictions: PublicPrediction[] | null = locked
+  // Everyone's picks are revealed once the match has kicked off OR once you have
+  // made your own prediction (predicting unlocks viewing). Mirrors the RLS rule.
+  const revealed = locked || mine !== undefined;
+
+  const allPredictions: PublicPrediction[] | null = revealed
     ? m.predictions
         .map((p) => ({
           username: p.profiles?.username ?? "player",
@@ -173,11 +177,14 @@ export async function getMatch(id: string): Promise<MatchDTO | null> {
 
   const row = data as unknown as MatchRow;
 
-  // Before kickoff, RLS hides other players' rows, so fetch the identities of
-  // everyone who predicted (without their scores) to show who's locked in.
-  // After kickoff the full list (with scores) is already available.
+  // While the full list is still hidden (you haven't predicted and kickoff
+  // hasn't passed), fetch the identities of everyone who predicted — without
+  // their scores — so the UI can show who's locked in. Once you predict, or the
+  // match kicks off, the full list (with scores) is available and this is moot.
+  const mine = user ? row.predictions.some((p) => p.user_id === user.id) : false;
+  const revealed = isLocked(row.kickoff_time) || mine;
   let predictors: Predictor[] = [];
-  if (!isLocked(row.kickoff_time)) {
+  if (!revealed) {
     const { data: rows } = await supabase.rpc("get_predictors", { p_match_id: id });
     predictors = (rows ?? []).map((p) => ({
       username: p.username,

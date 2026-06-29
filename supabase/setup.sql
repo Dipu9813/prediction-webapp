@@ -372,6 +372,29 @@ revoke all on function public.get_predictors(uuid) from public;
 grant execute on function public.get_predictors(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
+-- Has the current user already predicted this match?  Used by the predictions
+-- SELECT policy so that making a prediction unlocks viewing everyone else's.
+-- SECURITY DEFINER is essential: a subquery on `predictions` inside that table's
+-- own RLS policy would otherwise recurse ("infinite recursion detected"). This
+-- runs as the owner, bypassing RLS, and only reads the caller's own rows.
+-- ---------------------------------------------------------------------------
+create or replace function public.has_predicted(p_match_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.predictions
+    where match_id = p_match_id and user_id = auth.uid()
+  );
+$$;
+
+revoke all on function public.has_predicted(uuid) from public;
+grant execute on function public.has_predicted(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Row-Level Security
 -- ---------------------------------------------------------------------------
 alter table public.profiles    enable row level security;
@@ -432,13 +455,16 @@ create policy matches_admin_write on public.matches
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
 -- predictions: THE CORE RULES
---  * SELECT: you always see your own; everyone else's only AFTER kickoff.
+--  * SELECT: you always see your own; everyone else's once you have ALSO
+--    predicted this match (predicting unlocks viewing — safe because picks are
+--    permanent and can't be edited), or once the match has kicked off (public).
 --  * INSERT: only your own, and only BEFORE kickoff.
 --  * UPDATE/DELETE: no policy -> denied -> predictions are permanent.
 drop policy if exists predictions_select on public.predictions;
 create policy predictions_select on public.predictions
   for select to authenticated using (
     user_id = auth.uid()
+    or public.has_predicted(match_id)
     or exists (
       select 1 from public.matches m
       where m.id = match_id and m.kickoff_time <= now()
