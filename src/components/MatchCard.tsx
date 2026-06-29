@@ -60,6 +60,15 @@ export default function MatchCard({ match }: { match: MatchDTO }) {
             <span className="font-bold text-brand">
               {match.myPrediction.predictedHomeScore} – {match.myPrediction.predictedAwayScore}
             </span>
+            {match.myPrediction.predictedAdvancer && (
+              <span className="ml-2 text-xs text-slate-400">
+                ·{" "}
+                {match.myPrediction.predictedAdvancer === "HOME"
+                  ? match.homeTeam
+                  : match.awayTeam}{" "}
+                to advance
+              </span>
+            )}
             {match.myPrediction.pointsAwarded !== null && (
               <span className="ml-2 badge bg-gold/20 text-gold">
                 +{match.myPrediction.pointsAwarded} pts
@@ -72,6 +81,7 @@ export default function MatchCard({ match }: { match: MatchDTO }) {
             homeTeam={match.homeTeam}
             awayTeam={match.awayTeam}
             locked={match.locked}
+            isKnockout={match.isKnockout}
           />
         )}
 

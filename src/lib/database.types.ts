@@ -3,6 +3,7 @@
 
 export type MatchStatus = "UPCOMING" | "LIVE" | "FINISHED";
 export type UserRole = "USER" | "ADMIN";
+export type Advancer = "HOME" | "AWAY";
 
 export type Profile = {
   id: string;
@@ -26,6 +27,11 @@ export type Match = {
   status: MatchStatus;
   home_score: number | null;
   away_score: number | null;
+  stage: string | null;
+  advancer: Advancer | null;
+  went_to_penalties: boolean;
+  home_pens: number | null;
+  away_pens: number | null;
   prediction_count: number;
   external_id: string | null;
   created_at: string;
@@ -37,6 +43,7 @@ export type Prediction = {
   match_id: string;
   predicted_home_score: number;
   predicted_away_score: number;
+  predicted_advancer: Advancer | null;
   submitted_at: string;
   points_awarded: number | null;
   username: string | null;
@@ -92,7 +99,7 @@ export type Database = {
         Insert: Pick<
           Prediction,
           "user_id" | "match_id" | "predicted_home_score" | "predicted_away_score"
-        >;
+        > & { predicted_advancer?: Advancer | null };
         Update: Partial<Prediction>;
         Relationships: [];
       };

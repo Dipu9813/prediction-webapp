@@ -10,17 +10,26 @@ export default function PredictionForm({
   homeTeam,
   awayTeam,
   locked,
+  isKnockout = false,
 }: {
   matchId: string;
   homeTeam: string;
   awayTeam: string;
   locked: boolean;
+  isKnockout?: boolean;
 }) {
   const router = useRouter();
   const [home, setHome] = useState("");
   const [away, setAway] = useState("");
+  const [advancer, setAdvancer] = useState<"HOME" | "AWAY" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // A knockout can't end level, so when the user predicts a draw we ask which
+  // team they think goes through (penalties). For a decisive pick the advancer
+  // is implied by the higher score, so we don't ask.
+  const isDraw = home !== "" && away !== "" && Number(home) === Number(away);
+  const needsAdvancer = isKnockout && isDraw;
 
   if (locked) {
     return (
@@ -35,6 +44,10 @@ export default function PredictionForm({
     setError(null);
     if (home === "" || away === "") {
       setError("Enter both scores.");
+      return;
+    }
+    if (needsAdvancer && !advancer) {
+      setError("Pick which team advances.");
       return;
     }
     setSaving(true);
@@ -56,6 +69,7 @@ export default function PredictionForm({
       match_id: matchId,
       predicted_home_score: Number(home),
       predicted_away_score: Number(away),
+      predicted_advancer: needsAdvancer ? advancer : null,
     });
 
     setSaving(false);
@@ -101,6 +115,31 @@ export default function PredictionForm({
           {awayTeam}
         </div>
       </div>
+
+      {needsAdvancer && (
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-center text-xs text-slate-400">
+            A draw can&apos;t decide a knockout — who goes through?
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {(["HOME", "AWAY"] as const).map((side) => (
+              <button
+                key={side}
+                type="button"
+                onClick={() => setAdvancer(side)}
+                className={
+                  "rounded-lg px-3 py-2 text-sm font-semibold transition " +
+                  (advancer === side
+                    ? "bg-brand text-white"
+                    : "bg-white/5 text-slate-300 hover:bg-white/10")
+                }
+              >
+                {side === "HOME" ? homeTeam : awayTeam}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && <p className="text-center text-sm text-red-400">{error}</p>}
 

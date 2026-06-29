@@ -121,6 +121,11 @@ synced from the API into the `matches` table.
    [`supabase/realtime.sql`](supabase/realtime.sql) once to add `external_id`
    and delete the fakes. Fresh installs of `setup.sql` already include the column
    and no demo data.
+5. **If your DB predates knockout scoring**, run
+   [`supabase/knockout.sql`](supabase/knockout.sql) once. It adds the knockout
+   columns (`stage`, `advancer`, penalties) + the advancer-aware scoring and
+   re-scores finished matches. Fresh installs of `setup.sql` already include all
+   of this.
 
 ### Pulling the data
 - **Manual:** open `/admin` → **Sync real matches**. This fetches the World Cup

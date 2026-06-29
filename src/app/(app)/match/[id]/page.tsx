@@ -42,9 +42,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
           <div className="text-center">
             {showScore ? (
-              <div className="text-4xl font-extrabold tabular-nums">
-                {match.homeScore} <span className="text-slate-600">–</span> {match.awayScore}
-              </div>
+              <>
+                <div className="text-4xl font-extrabold tabular-nums">
+                  {match.homeScore} <span className="text-slate-600">–</span> {match.awayScore}
+                </div>
+                {match.wentToPenalties && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    {(match.advancer === "HOME" ? match.homeTeam : match.awayTeam)} won{" "}
+                    {match.homePens}–{match.awayPens} on penalties
+                  </p>
+                )}
+              </>
             ) : (
               <div className="text-2xl font-bold text-slate-500">vs</div>
             )}
@@ -73,6 +81,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <div className="text-2xl font-extrabold text-brand">
               {match.myPrediction.predictedHomeScore} – {match.myPrediction.predictedAwayScore}
             </div>
+            {match.myPrediction.predictedAdvancer && (
+              <p className="mt-1 text-xs text-slate-400">
+                {match.myPrediction.predictedAdvancer === "HOME"
+                  ? match.homeTeam
+                  : match.awayTeam}{" "}
+                to advance
+              </p>
+            )}
             {match.myPrediction.pointsAwarded !== null && (
               <span className="mt-2 inline-block badge bg-gold/20 text-gold">
                 Earned {match.myPrediction.pointsAwarded} points
@@ -85,6 +101,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             homeTeam={match.homeTeam}
             awayTeam={match.awayTeam}
             locked={match.locked}
+            isKnockout={match.isKnockout}
           />
         )}
       </div>
@@ -144,8 +161,15 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                   </div>
                 )}
                 <span className="flex-1 truncate">{p.username}</span>
-                <span className="font-bold tabular-nums">
-                  {p.predictedHomeScore} – {p.predictedAwayScore}
+                <span className="text-right">
+                  <span className="font-bold tabular-nums">
+                    {p.predictedHomeScore} – {p.predictedAwayScore}
+                  </span>
+                  {p.predictedAdvancer && (
+                    <span className="block text-xs text-slate-400">
+                      {p.predictedAdvancer === "HOME" ? match.homeTeam : match.awayTeam} to advance
+                    </span>
+                  )}
                 </span>
                 {p.pointsAwarded !== null && (
                   <span className="badge bg-gold/20 text-gold">+{p.pointsAwarded}</span>

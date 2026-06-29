@@ -43,8 +43,18 @@ create table if not exists public.matches (
   stadium           text,
   kickoff_time      timestamptz not null,
   status            match_status not null default 'UPCOMING',
-  home_score        integer,
+  home_score        integer,        -- the ON-PITCH score (after 90/extra time; penalties excluded)
   away_score        integer,
+  -- Knockout fields. stage is null/'GROUP_STAGE' for group games; for knockouts
+  -- it is 'LAST_32', 'LAST_16', 'QUARTER_FINALS', etc. advancer ('HOME'/'AWAY')
+  -- is the team that actually went through (from the API `winner`, penalties
+  -- included). When a tie is settled on penalties we still store the level
+  -- on-pitch score above and keep the shootout tally in home_pens/away_pens.
+  stage             text,
+  advancer          text check (advancer in ('HOME', 'AWAY')),
+  went_to_penalties boolean not null default false,
+  home_pens         integer,
+  away_pens         integer,
   prediction_count  integer not null default 0,
   external_id       text unique, -- id from the football data API (for idempotent sync)
   created_at        timestamptz not null default now()
@@ -64,6 +74,10 @@ create table if not exists public.predictions (
   match_id              uuid not null references public.matches (id) on delete cascade,
   predicted_home_score  integer not null check (predicted_home_score between 0 and 99),
   predicted_away_score  integer not null check (predicted_away_score between 0 and 99),
+  -- For a predicted DRAW on a knockout match: which team the user thinks goes
+  -- through ('HOME'/'AWAY'). Null for group games or non-draw predictions
+  -- (where the advancer is implied by the higher predicted score).
+  predicted_advancer    text check (predicted_advancer in ('HOME', 'AWAY')),
   submitted_at          timestamptz not null default now(),
   points_awarded        integer,
   -- Denormalised from profiles for easy recognition in the table editor.
@@ -184,18 +198,42 @@ create trigger trg_prediction_count
   for each row execute function public.bump_prediction_count();
 
 -- ---------------------------------------------------------------------------
--- Scoring: exact = 3, correct outcome = 1, wrong = 0
+-- Scoring:
+--   * Decisive result (group game, or knockout settled on the pitch in 90/120):
+--       classic, MUTUALLY EXCLUSIVE, max 3 — exact = 3, correct direction = 1.
+--   * Knockout settled by penalties (level on the pitch, advancer decides):
+--       exact draw score (+3) and correct advancer (+1) STACK, so up to 4.
+-- The predicted advancer is the higher-scored team for a decisive pick, or the
+-- explicit p_pred_adv when the user predicted a draw.
 -- ---------------------------------------------------------------------------
+-- Drop the old 4-arg version so the new wider signature isn't an ambiguous overload.
+drop function if exists public.points_for(int, int, int, int);
+
 create or replace function public.points_for(
-  ph int, pa int, ah int, aa int
+  ph int, pa int, ah int, aa int,
+  p_is_knockout boolean default false,
+  p_pred_adv text default null,
+  p_match_adv text default null
 ) returns int
 language sql
 immutable
 as $$
   select case
-    when ph = ah and pa = aa then 3
-    when sign(ph - pa) = sign(ah - aa) then 1
-    else 0
+    -- Knockout that finished level and was decided by the advancer: score and
+    -- advancer stack (max 4).
+    when p_is_knockout and ah = aa and p_match_adv is not null then
+      (case when ph = ah and pa = aa then 3 else 0 end)
+      + (case when (case when ph > pa then 'HOME'
+                         when pa > ph then 'AWAY'
+                         else p_pred_adv end) = p_match_adv
+              then 1 else 0 end)
+    -- Everything else: classic, mutually exclusive, max 3.
+    else
+      case
+        when ph = ah and pa = aa then 3
+        when sign(ph - pa) = sign(ah - aa) then 1
+        else 0
+      end
   end;
 $$;
 
@@ -208,14 +246,18 @@ set search_path = public
 as $$
 declare
   m public.matches%rowtype;
+  v_knockout boolean;
 begin
   select * into m from public.matches where id = p_match_id;
   if not found then return; end if;
 
+  v_knockout := m.stage is not null and m.stage <> 'GROUP_STAGE';
+
   if m.status = 'FINISHED' and m.home_score is not null and m.away_score is not null then
     update public.predictions p
        set points_awarded = public.points_for(
-             p.predicted_home_score, p.predicted_away_score, m.home_score, m.away_score)
+             p.predicted_home_score, p.predicted_away_score, m.home_score, m.away_score,
+             v_knockout, p.predicted_advancer, m.advancer)
      where p.match_id = p_match_id;
   else
     -- not finished -> clear any awarded points for this match

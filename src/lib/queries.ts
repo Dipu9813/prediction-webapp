@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { MatchStatus, Profile } from "@/lib/database.types";
+import type { Advancer, MatchStatus, Profile } from "@/lib/database.types";
 import { isLocked } from "@/lib/utils";
 
 export type PublicPrediction = {
@@ -8,6 +8,7 @@ export type PublicPrediction = {
   image: string | null;
   predictedHomeScore: number;
   predictedAwayScore: number;
+  predictedAdvancer: Advancer | null;
   pointsAwarded: number | null;
 };
 
@@ -29,10 +30,17 @@ export type MatchDTO = {
   status: MatchStatus;
   homeScore: number | null;
   awayScore: number | null;
+  stage: string | null;
+  isKnockout: boolean;
+  advancer: Advancer | null;
+  wentToPenalties: boolean;
+  homePens: number | null;
+  awayPens: number | null;
   locked: boolean;
   myPrediction: {
     predictedHomeScore: number;
     predictedAwayScore: number;
+    predictedAdvancer: Advancer | null;
     pointsAwarded: number | null;
   } | null;
   allPredictions: PublicPrediction[] | null; // null while hidden (before kickoff)
@@ -45,6 +53,7 @@ type PredictionJoin = {
   user_id: string;
   predicted_home_score: number;
   predicted_away_score: number;
+  predicted_advancer: Advancer | null;
   points_awarded: number | null;
   profiles: { username: string; name: string; image: string | null } | null;
 };
@@ -60,12 +69,17 @@ type MatchRow = {
   status: MatchStatus;
   home_score: number | null;
   away_score: number | null;
+  stage: string | null;
+  advancer: Advancer | null;
+  went_to_penalties: boolean;
+  home_pens: number | null;
+  away_pens: number | null;
   prediction_count: number;
   predictions: PredictionJoin[];
 };
 
 const SELECT =
-  "*, predictions(user_id, predicted_home_score, predicted_away_score, points_awarded, profiles(username, name, image))";
+  "*, predictions(user_id, predicted_home_score, predicted_away_score, predicted_advancer, points_awarded, profiles(username, name, image))";
 
 function toDTO(m: MatchRow, userId: string | null, predictors: Predictor[] = []): MatchDTO {
   const locked = isLocked(m.kickoff_time);
@@ -85,6 +99,7 @@ function toDTO(m: MatchRow, userId: string | null, predictors: Predictor[] = [])
           image: p.profiles?.image ?? null,
           predictedHomeScore: p.predicted_home_score,
           predictedAwayScore: p.predicted_away_score,
+          predictedAdvancer: p.predicted_advancer,
           pointsAwarded: p.points_awarded,
         }))
         .sort((a, b) => (b.pointsAwarded ?? 0) - (a.pointsAwarded ?? 0))
@@ -101,11 +116,18 @@ function toDTO(m: MatchRow, userId: string | null, predictors: Predictor[] = [])
     status,
     homeScore: m.home_score,
     awayScore: m.away_score,
+    stage: m.stage,
+    isKnockout: m.stage != null && m.stage !== "GROUP_STAGE",
+    advancer: m.advancer,
+    wentToPenalties: m.went_to_penalties,
+    homePens: m.home_pens,
+    awayPens: m.away_pens,
     locked,
     myPrediction: mine
       ? {
           predictedHomeScore: mine.predicted_home_score,
           predictedAwayScore: mine.predicted_away_score,
+          predictedAdvancer: mine.predicted_advancer,
           pointsAwarded: mine.points_awarded,
         }
       : null,
