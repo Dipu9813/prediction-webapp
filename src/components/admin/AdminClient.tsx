@@ -215,17 +215,40 @@ function MatchRow({ match, reload }: { match: Match; reload: () => void }) {
   const [status, setStatus] = useState<MatchStatus>(match.status);
   const [home, setHome] = useState(match.home_score?.toString() ?? "");
   const [away, setAway] = useState(match.away_score?.toString() ?? "");
+  const [pens, setPens] = useState(match.went_to_penalties);
+  const [homePens, setHomePens] = useState(match.home_pens?.toString() ?? "");
+  const [awayPens, setAwayPens] = useState(match.away_pens?.toString() ?? "");
   const [busy, setBusy] = useState(false);
+
+  // Knockout matches need an advancer; group matches never do.
+  const isKnockout = !!match.stage && match.stage !== "GROUP_STAGE";
 
   async function save() {
     setBusy(true);
-    // Updating status/scores fires the DB scoring trigger automatically.
+    const h = home === "" ? null : Number(home);
+    const a = away === "" ? null : Number(away);
+    const hp = pens && homePens !== "" ? Number(homePens) : null;
+    const ap = pens && awayPens !== "" ? Number(awayPens) : null;
+
+    // Derive who advances: a shootout is decided by the penalty tally, an
+    // on-pitch result by the score; a level non-shootout game has no advancer.
+    let advancer: "HOME" | "AWAY" | null = null;
+    if (isKnockout) {
+      if (pens && hp !== null && ap !== null && hp !== ap) advancer = hp > ap ? "HOME" : "AWAY";
+      else if (h !== null && a !== null && h !== a) advancer = h > a ? "HOME" : "AWAY";
+    }
+
+    // Updating status/score/advancer fires the DB scoring trigger automatically.
     await supabase
       .from("matches")
       .update({
         status,
-        home_score: home === "" ? null : Number(home),
-        away_score: away === "" ? null : Number(away),
+        home_score: h,
+        away_score: a,
+        went_to_penalties: pens,
+        home_pens: hp,
+        away_pens: ap,
+        advancer,
       })
       .eq("id", match.id);
     setBusy(false);
@@ -279,6 +302,35 @@ function MatchRow({ match, reload }: { match: Match; reload: () => void }) {
           className="input w-14 text-center"
         />
       </div>
+
+      {isKnockout && (
+        <label className="flex items-center gap-1.5 text-xs text-slate-400" title="Decided by a penalty shootout">
+          <input type="checkbox" checked={pens} onChange={(e) => setPens(e.target.checked)} />
+          Penalties
+        </label>
+      )}
+
+      {isKnockout && pens && (
+        <div className="flex items-center gap-1" title="Penalty shootout score">
+          <input
+            type="number"
+            min={0}
+            placeholder="–"
+            value={homePens}
+            onChange={(e) => setHomePens(e.target.value)}
+            className="input w-12 text-center"
+          />
+          <span className="text-slate-500">pens</span>
+          <input
+            type="number"
+            min={0}
+            placeholder="–"
+            value={awayPens}
+            onChange={(e) => setAwayPens(e.target.value)}
+            className="input w-12 text-center"
+          />
+        </div>
+      )}
 
       <button onClick={save} disabled={busy} className="btn-primary">
         {busy ? "Saving…" : "Save"}

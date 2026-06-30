@@ -29,19 +29,38 @@ async function runSync() {
   }
 
   const admin = createAdminClient();
-  // Upsert on external_id so repeated syncs update scores/status in place.
-  // Setting a finished score fires the DB trigger that awards points.
-  const { error } = await admin
+
+  // A finished result is FINAL. Never let a later sync overwrite a match we've
+  // already recorded as FINISHED — the football-data.org free tier sometimes
+  // mangles shootout data after full-time (impossible 3–3/4–4 tallies, null
+  // winner) and would corrupt a correct/hand-corrected result. This also lets
+  // admins fix scores by hand without the next sync wiping them. Live/upcoming
+  // matches still update on every sync.
+  const { data: finishedRows } = await admin
     .from("matches")
-    .upsert(matches, { onConflict: "external_id" });
-  if (error) throw new Error(error.message);
+    .select("external_id")
+    .eq("status", "FINISHED")
+    .not("external_id", "is", null);
+  const frozen = new Set((finishedRows ?? []).map((r) => r.external_id));
+  const toUpsert = matches.filter((m) => !frozen.has(m.external_id));
 
   // Record a heartbeat so the admin panel can tell whether the cron is alive.
   await admin
     .from("app_meta")
     .upsert({ key: "last_synced_at", value: new Date().toISOString() }, { onConflict: "key" });
 
-  return { synced: matches.length };
+  if (toUpsert.length === 0) {
+    return { synced: 0, skipped: frozen.size, message: "All matches already finalized." };
+  }
+
+  // Upsert on external_id so repeated syncs update scores/status in place.
+  // Setting a finished score fires the DB trigger that awards points.
+  const { error } = await admin
+    .from("matches")
+    .upsert(toUpsert, { onConflict: "external_id" });
+  if (error) throw new Error(error.message);
+
+  return { synced: toUpsert.length, skipped: matches.length - toUpsert.length };
 }
 
 // Cron (Vercel) calls GET with the Authorization: Bearer <CRON_SECRET> header.

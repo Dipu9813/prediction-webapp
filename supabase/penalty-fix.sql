@@ -79,10 +79,25 @@ begin
 end;
 $$;
 
--- 3. Recompute every finished match now, so points are correct even before the
---    next sync lands the fixed advancer values. (This mirrors recalculate_all()
---    but skips its is_admin() gate, which would reject the SQL Editor's
---    auth-less session.)
+-- 3. Hand-correct the two shootouts the free-tier feed got wrong (its fullTime/
+--    penalties/winner are all unreliable here, so neither the old code nor the
+--    derive-from-fullTime fix can recover the real tally — it must be set by
+--    hand). Real results: Paraguay beat Germany 4–3 on pens (1–1), Morocco beat
+--    the Netherlands 3–2 on pens (1–1). Sync now leaves FINISHED matches alone,
+--    so these stick.
+update public.matches
+   set home_score = 1, away_score = 1,
+       went_to_penalties = true, home_pens = 3, away_pens = 4, advancer = 'AWAY'
+ where home_team ilike 'Germany' and away_team ilike 'Paraguay';
+
+update public.matches
+   set home_score = 1, away_score = 1,
+       went_to_penalties = true, home_pens = 2, away_pens = 3, advancer = 'AWAY'
+ where home_team ilike 'Netherlands' and away_team ilike 'Morocco';
+
+-- 4. Recompute every finished match now, so points are correct even before the
+--    next sync. (This mirrors recalculate_all() but skips its is_admin() gate,
+--    which would reject the SQL Editor's auth-less session.)
 do $$
 declare r record;
 begin
