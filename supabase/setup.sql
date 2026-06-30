@@ -289,7 +289,8 @@ as $$
 begin
   if (new.status is distinct from old.status)
      or (new.home_score is distinct from old.home_score)
-     or (new.away_score is distinct from old.away_score) then
+     or (new.away_score is distinct from old.away_score)
+     or (new.advancer is distinct from old.advancer) then
     perform public.score_match(new.id);
   end if;
   return new;

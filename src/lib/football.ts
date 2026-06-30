@@ -83,9 +83,22 @@ export async function fetchWorldCupMatches(): Promise<MatchUpsert[]> {
       ? n(s.regularTime?.away) + n(s.extraTime?.away)
       : s.fullTime.away;
 
+    // Penalty tally. The dedicated `penalties` object is unreliable on the free
+    // tier (observed 4–4 for a real 3–4 shootout, 3–3 for a real 2–3), but
+    // fullTime is exactly on-pitch + shootout, so derive the tally from it — the
+    // same "pollution" we strip above, here put to use.
+    const homePens = wentToPenalties ? n(s.fullTime.home) - n(homeScore) : null;
+    const awayPens = wentToPenalties ? n(s.fullTime.away) - n(awayScore) : null;
+
     // Who actually advanced (penalties included). null for draws/unfinished.
-    const advancer =
+    // `winner` is the source of truth, but it can blank out for shootouts
+    // (observed null for finished penalty matches), so fall back to the derived
+    // tally when the match went to penalties but no winner was reported.
+    let advancer: "HOME" | "AWAY" | null =
       s.winner === "HOME_TEAM" ? "HOME" : s.winner === "AWAY_TEAM" ? "AWAY" : null;
+    if (advancer === null && wentToPenalties && homePens !== awayPens) {
+      advancer = (homePens ?? 0) > (awayPens ?? 0) ? "HOME" : "AWAY";
+    }
 
     return {
       external_id: String(m.id),
@@ -101,8 +114,8 @@ export async function fetchWorldCupMatches(): Promise<MatchUpsert[]> {
       stage: m.stage ?? null,
       advancer,
       went_to_penalties: wentToPenalties,
-      home_pens: wentToPenalties ? n(s.penalties?.home) : null,
-      away_pens: wentToPenalties ? n(s.penalties?.away) : null,
+      home_pens: homePens,
+      away_pens: awayPens,
     };
   });
 }
