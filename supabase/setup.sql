@@ -199,10 +199,14 @@ create trigger trg_prediction_count
 
 -- ---------------------------------------------------------------------------
 -- Scoring:
---   * Decisive result (group game, or knockout settled on the pitch in 90/120):
---       classic, MUTUALLY EXCLUSIVE, max 3 — exact = 3, correct direction = 1.
+--   * Group game: classic, MUTUALLY EXCLUSIVE, max 3 — exact = 3, correct
+--     direction = 1, else 0.
 --   * Knockout settled by penalties (level on the pitch, advancer decides):
 --       exact draw score (+3) and correct advancer (+1) STACK, so up to 4.
+--   * Knockout settled on the pitch (90/120): exact = 3; otherwise 1 if you got
+--     the result direction OR the advancer right, else 0. The "or advancer"
+--     covers a draw pick with the right team named (e.g. predict 1-1 away-adv,
+--     match ends 1-3 to away -> +1), which classic direction-matching would miss.
 -- The predicted advancer is the higher-scored team for a decisive pick, or the
 -- explicit p_pred_adv when the user predicted a draw.
 -- ---------------------------------------------------------------------------
@@ -219,15 +223,27 @@ language sql
 immutable
 as $$
   select case
-    -- Knockout that finished level and was decided by the advancer: score and
-    -- advancer stack (max 4).
+    -- Knockout that finished level and was decided by penalties: the on-pitch
+    -- score and the shootout outcome are independent calls, so they STACK (max 4).
     when p_is_knockout and ah = aa and p_match_adv is not null then
       (case when ph = ah and pa = aa then 3 else 0 end)
       + (case when (case when ph > pa then 'HOME'
                          when pa > ph then 'AWAY'
                          else p_pred_adv end) = p_match_adv
               then 1 else 0 end)
-    -- Everything else: classic, mutually exclusive, max 3.
+    -- Knockout decided on the pitch: exact = 3; else 1 for correct direction
+    -- OR correct advancer (the latter rescues a draw pick that named the team
+    -- which actually went through). Mutually exclusive, max 3.
+    when p_is_knockout and p_match_adv is not null then
+      case
+        when ph = ah and pa = aa then 3
+        when sign(ph - pa) = sign(ah - aa)
+          or (case when ph > pa then 'HOME'
+                   when pa > ph then 'AWAY'
+                   else p_pred_adv end) = p_match_adv then 1
+        else 0
+      end
+    -- Group stage / not yet decided: classic, mutually exclusive, max 3.
     else
       case
         when ph = ah and pa = aa then 3
